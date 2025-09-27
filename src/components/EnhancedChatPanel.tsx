@@ -1,11 +1,17 @@
 import { useState } from 'react'
-import { Send, PanelRightOpen, Activity, BarChart3, Bot, User } from 'lucide-react'
+import { Send, Activity, Bot } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { ScrollArea } from './ui/scroll-area'
 import { SelectionTags } from './SelectionTags'
 import { useRunningCoach } from '../hooks/useRunningCoach'
 import { useAuth } from '../contexts/AuthContext'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton
+} from './ai-elements/conversation'
+import { Message, MessageContent } from './ai-elements/message'
+import { Response } from './ai-elements/response'
 
 interface EnhancedChatPanelProps {
   onPlanGenerated?: (plan: any) => void
@@ -18,7 +24,6 @@ interface EnhancedChatPanelProps {
   onRequestComparison?: (request: string) => void
   onOpenAnalysis?: () => void
   isAnalysisPanelVisible?: boolean
-  hasExistingPlans?: boolean
 }
 
 export function EnhancedChatPanel({
@@ -29,8 +34,7 @@ export function EnhancedChatPanel({
   onOpenPlanPanel,
   isPlanPanelVisible = true,
   onOpenAnalysis,
-  isAnalysisPanelVisible = false,
-  hasExistingPlans = false
+  isAnalysisPanelVisible = false
 }: EnhancedChatPanelProps) {
   const [inputValue, setInputValue] = useState('')
   const { accessToken, logout, user } = useAuth()
@@ -116,32 +120,30 @@ export function EnhancedChatPanel({
           </div>
 
           {/* Panel toggle buttons */}
-          <div className="flex items-center gap-2">
-            {hasExistingPlans && onOpenPlanPanel && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenPlanPanel}
-                className={isPlanPanelVisible ? 'bg-green-50 text-green-600' : ''}
-              >
-                <Activity className="w-4 h-4 mr-2" />
-                Plans
-                <PanelRightOpen className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-
-            {onOpenAnalysis && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenAnalysis}
-                className={isAnalysisPanelVisible ? 'bg-blue-50 text-blue-600' : ''}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Analysis
-                <PanelRightOpen className="w-4 h-4 ml-2" />
-              </Button>
-            )}
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-500">
+              Need to {!isPlanPanelVisible && !isAnalysisPanelVisible ? 'access your ' : ''}
+              {!isPlanPanelVisible && onOpenPlanPanel && (
+                <>
+                  <button
+                    onClick={onOpenPlanPanel}
+                    className="text-green-600 hover:text-green-700 hover:underline"
+                  >
+                    training plans
+                  </button>
+                  {!isAnalysisPanelVisible && onOpenAnalysis && ' or '}
+                </>
+              )}
+              {!isAnalysisPanelVisible && onOpenAnalysis && (
+                <button
+                  onClick={onOpenAnalysis}
+                  className="text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  workout analysis
+                </button>
+              )}
+              ?
+            </div>
 
             <Button
               variant="ghost"
@@ -164,42 +166,12 @@ export function EnhancedChatPanel({
             />
           </div>
         )}
-
-        {/* Quick Actions */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleQuickAction('performance')}
-            disabled={status !== 'ready'}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Performance Analysis
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleQuickAction('workout')}
-            disabled={status !== 'ready'}
-          >
-            <Activity className="w-4 h-4 mr-2" />
-            Workout Recommendation
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleQuickAction('training')}
-            disabled={status !== 'ready'}
-          >
-            Training Advice
-          </Button>
-        </div>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.length === 0 && (
+      <Conversation className="flex-1">
+        <ConversationContent className="space-y-4">
+          {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6">
               <div className="text-center mb-8">
                 <div className="flex items-center justify-center w-16 h-16 bg-green-500 rounded-2xl mb-4 mx-auto">
@@ -287,97 +259,82 @@ export function EnhancedChatPanel({
                 </div>
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              {messages.map((message) => (
+                <Message key={message.id} from={message.role}>
+                  <MessageContent variant={message.role === 'assistant' ? 'flat' : 'contained'}>
+                    {(() => {
+                      // Handle different message formats
+                      if (message.parts && Array.isArray(message.parts)) {
+                        // AI SDK UIMessage format with parts
+                        return message.parts.map((part, partIndex) => {
+                          if (part.type === 'text') {
+                            return message.role === 'assistant' ? (
+                              <Response key={partIndex}>{part.text}</Response>
+                            ) : (
+                              <div key={partIndex} className="whitespace-pre-wrap">{part.text}</div>
+                            )
+                          }
+                          return null
+                        });
+                      } else if ((message as any).content) {
+                        // Simple message format with content property
+                        const content = (message as any).content;
+                        return message.role === 'assistant' ? (
+                          <Response>{content}</Response>
+                        ) : (
+                          <div className="whitespace-pre-wrap">{content}</div>
+                        );
+                      } else if (typeof message === 'string') {
+                        // Simple string message
+                        return message.role === 'assistant' ? (
+                          <Response>{message}</Response>
+                        ) : (
+                          <div className="whitespace-pre-wrap">{message}</div>
+                        );
+                      } else {
+                        // Fallback: display the message as JSON for debugging
+                        console.warn('Unknown message format:', message);
+                        return <div className="text-red-500 text-sm">Message format error: {JSON.stringify(message)}</div>;
+                      }
+                    })()}
+                    <div className="text-xs opacity-60 mt-1">
+                      {new Date().toLocaleTimeString()}
+                    </div>
+                  </MessageContent>
+                </Message>
+              ))}
 
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {message.role === 'assistant' && (
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
+              {status === 'streaming' && (
+                <Message from="assistant">
+                  <MessageContent variant="flat">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-100" />
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-200" />
+                      </div>
+                      <span className="text-sm text-gray-600">
+                        {status === 'streaming' ? 'Streaming...' :
+                         status === 'in_progress' ? 'Processing...' :
+                         'Analyzing your data...'}
+                      </span>
+                    </div>
+                  </MessageContent>
+                </Message>
               )}
-
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                <div className="text-sm whitespace-pre-wrap">
-                  {(() => {
-                    // Debug log to understand message structure
-                    console.log('Rendering message:', message);
-                    
-                    // Handle different message formats
-                    if (message.parts && Array.isArray(message.parts)) {
-                      // AI SDK UIMessage format with parts
-                      return message.parts.map((part, partIndex) => {
-                        if (part.type === 'text') {
-                          return <span key={partIndex}>{part.text}</span>
-                        }
-                        return null
-                      });
-                    } else if ((message as any).content) {
-                      // Simple message format with content property
-                      return <span>{(message as any).content}</span>;
-                    } else if (typeof message === 'string') {
-                      // Simple string message
-                      return <span>{message}</span>;
-                    } else {
-                      // Fallback: display the message as JSON for debugging
-                      console.warn('Unknown message format:', message);
-                      return <span style={{color: 'red'}}>Message format error: {JSON.stringify(message)}</span>;
-                    }
-                  })()}
-                </div>
-                <div className="text-xs opacity-60 mt-1">
-                  {new Date().toLocaleTimeString()}
-                </div>
-              </div>
-
-              {message.role === 'user' && (
-                <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {status === 'streaming' && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <div className="bg-gray-100 rounded-lg px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-100" />
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-200" />
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    {status === 'streaming' ? 'Streaming...' : 
-                     status === 'in_progress' ? 'Processing...' : 
-                     'Analyzing your data...'}
-                  </span>
-                </div>
-              </div>
-            </div>
+            </>
           )}
-        </div>
-      </ScrollArea>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       {/* Error Display */}
       {error && (
         <div className="p-4 bg-red-50 border-t border-red-200">
           <p className="text-sm text-red-600">
-            Error: {error.message}
+            Error: {error?.message || 'An unknown error occurred'}
           </p>
           <Button
             variant="outline"
