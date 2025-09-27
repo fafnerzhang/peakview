@@ -1,24 +1,18 @@
 import { Mastra } from '@mastra/core/mastra';
+import { PostgresStore } from '@mastra/pg';
 
-// Basic Mastra configuration for Next.js
+// PostgreSQL configuration from environment
+const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+
+// Basic Mastra configuration with PostgreSQL storage
 export const mastra = new Mastra({
   agents: {
     // Running Coach agent is created dynamically with authentication
     // Use createRunningCoachAgent() function instead
   },
-  // Use in-memory storage for simplicity in Next.js
-  storage: {
-    // Simple in-memory storage
-    async get(key: string) {
-      return undefined;
-    },
-    async set(key: string, value: any) {
-      return;
-    },
-    async delete(key: string) {
-      return;
-    }
-  }
+  storage: new PostgresStore({
+    connectionString,
+  }),
 });
 
 // Export the agent creation functions

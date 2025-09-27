@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRunningCoachAgent } from '../../../src/lib/mastra/agents/running-coach';
+import { createRunningCoachAgentWithToken } from '../../../src/lib/mastra/agents/running-coach';
 
 // Helper function to safely log request details
 function logRequestDetails(req: NextRequest, context: string) {
@@ -94,14 +94,12 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('🤖 Chat API: Creating running coach agent with token...');
-    
-    // Create the running coach agent with access token
-    const { createRunningCoachAgentWithToken } = await import('../../../src/lib/mastra/agents/running-coach');
-    
+
     try {
       const agent = await createRunningCoachAgentWithToken(accessToken);
       console.log('✅ Chat API: Running coach agent created successfully');
-      
+      const memory = await agent.getMemory()
+      const {messages, uiMessages} = await memory!.query({threadId: 'default'})
       console.log('🚀 Chat API: Starting stream with Mastra Agent...');
       
       // Convert UIMessages to simple format expected by Mastra Agent

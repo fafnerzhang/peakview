@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Send, Activity, Bot } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { SelectionTags } from './SelectionTags'
-import { useRunningCoach } from '../hooks/useRunningCoach'
+import { useRunningCoachContext } from '../contexts/RunningCoachContext'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Conversation,
@@ -37,26 +37,25 @@ export function EnhancedChatPanel({
   isAnalysisPanelVisible = false
 }: EnhancedChatPanelProps) {
   const [inputValue, setInputValue] = useState('')
-  const { accessToken, logout, user } = useAuth()
+  const { user, logout } = useAuth()
 
-  // Initialize the running coach with access token
-  const chatHook = useRunningCoach({
-    accessToken: accessToken || '',
-    onError: (error) => {
-      console.error('Running Coach error:', error)
-    }
-  })
-
+  // Use the running coach context (state is managed at App level)
   const {
     messages,
-    status,
+    isLoading,
     error,
     askAboutTraining,
     getPerformanceAnalysis,
     getWorkoutRecommendations,
     isInitialized,
-    sendMessage
-  } = chatHook
+    sendMessage: contextSendMessage
+  } = useRunningCoachContext()
+
+  // Map new API to old API for compatibility
+  const status = isLoading ? 'loading' : 'ready'
+  const sendMessage = contextSendMessage || (({ text }: { text: string }) => {
+    console.warn('sendMessage not available in context');
+  })
 
   // Handle manual message sending
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -66,6 +65,8 @@ export function EnhancedChatPanel({
     sendMessage({ text: inputValue })
     setInputValue('')
   }
+
+  // Remove input sync since we're managing input locally
 
   // Quick action handlers
   const handleQuickAction = (action: string) => {

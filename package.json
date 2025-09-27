@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.19",
+    "@ai-sdk/google": "^2.0.17",
+    "@ai-sdk/openai": "^2.0.38",
     "@ai-sdk/react": "^2.0.54",
     "@dnd-kit/core": "latest",
     "@dnd-kit/sortable": "latest",
@@ -17,6 +19,8 @@
     "@hookform/resolvers": "^3.10.0",
     "@mastra/core": "^0.18.0",
     "@mastra/mcp": "^0.13.1",
+    "@mastra/memory": "^0.15.3",
+    "@mastra/pg": "^0.16.1",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
     "@radix-ui/react-aspect-ratio": "1.1.2",

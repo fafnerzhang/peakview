@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { RunningCoachProvider } from './contexts/RunningCoachContext'
 import { LoginPage } from './components/LoginPage'
 import { Sidebar } from './components/Sidebar'
 import { Dashboard } from './components/Dashboard'
@@ -10,7 +11,7 @@ import { WorkoutPlanView } from './components/WorkoutPlanView'
 type ViewType = 'dashboard' | 'activities' | 'activity-detail' | 'calendar' | 'goals' | 'settings' | 'chat'
 
 function AppContent() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, accessToken } = useAuth()
   const [activeView, setActiveView] = useState<ViewType>('dashboard')
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
 
@@ -79,12 +80,17 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar activeView={activeView} onViewChange={handleViewChange} />
-      <div className={`flex-1 ${activeView === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
-        {renderMainContent()}
+    <RunningCoachProvider
+      accessToken={accessToken}
+      onError={(error) => console.error('Running Coach error:', error)}
+    >
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar activeView={activeView} onViewChange={handleViewChange} />
+        <div className={`flex-1 ${activeView === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
+          {renderMainContent()}
+        </div>
       </div>
-    </div>
+    </RunningCoachProvider>
   )
 }
 
