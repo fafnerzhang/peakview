@@ -1,18 +1,23 @@
 import { Mastra } from '@mastra/core/mastra';
 import { PostgresStore } from '@mastra/pg';
+import { createRunningCoachAgentWithToken } from './agents/running-coach';
 
 // PostgreSQL configuration from environment
 const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
 
-// Basic Mastra configuration with PostgreSQL storage
+// Shared PostgresStore instance - eliminates duplicate connection warnings
+export const sharedPostgresStore = new PostgresStore({
+  connectionString,
+});
+
+// Basic Mastra configuration with shared PostgreSQL storage
+const runningCoachAgent = createRunningCoachAgentWithToken(sharedPostgresStore)
+
 export const mastra = new Mastra({
   agents: {
-    // Running Coach agent is created dynamically with authentication
-    // Use createRunningCoachAgent() function instead
+    runningCoach: runningCoachAgent
   },
-  storage: new PostgresStore({
-    connectionString,
-  }),
+  storage: sharedPostgresStore,
 });
 
 // Export the agent creation functions

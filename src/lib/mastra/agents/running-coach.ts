@@ -13,7 +13,8 @@ import { createAuthenticatedPeakflowClient } from "../mcp/peakflow-client";
  */
 export async function createRunningCoachAgent(
   username: string,
-  password: string
+  password: string,
+  postgresStore: PostgresStore
 ) {
   console.log("🏃‍♂️ Creating Running Coach Agent with PeakFlow access...");
 
@@ -23,14 +24,12 @@ export async function createRunningCoachAgent(
   // Get tools from the authenticated client
   const tools = await authenticatedMcpClient.getTools();
 
-  // PostgreSQL configuration from environment
-  const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+  // Always use the provided PostgresStore to avoid duplicate connections
+  const storage = postgresStore;
 
   // Create memory instance for this agent
   const memory = new Memory({
-    storage: new PostgresStore({
-      connectionString,
-    }),
+    storage,
     options: {
       lastMessages: 10,
       workingMemory: {
@@ -112,28 +111,17 @@ Focus on being encouraging, data-driven, and safety-conscious. Use their actual 
 }
 
 /**
- * Create a Running Coach Agent with token for client-side usage
+ * Create a Running Coach Agent that dynamically resolves tools using runtime context
  */
-export async function createRunningCoachAgentWithToken(accessToken: string) {
-  const { createMcpClientWithToken } = await import("../mcp/peakflow-client");
+export function createRunningCoachAgentWithToken(postgresStore: PostgresStore) {
+  console.log("🏃‍♂️ Creating Dynamic Running Coach Agent...");
 
-  console.log("🏃‍♂️ Creating Running Coach Agent with access token...");
-
-  // Create MCP client with existing token
-  const mcpClient = createMcpClientWithToken(accessToken);
-
-  // Get tools from the client
-  const tools = await mcpClient.getTools();
-  console.log(`✅ Running Coach initialized with ${Object.keys(tools).length} PeakFlow tools`);
-
-  // PostgreSQL configuration from environment
-  const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+  // Always use the provided PostgresStore to avoid duplicate connections
+  const storage = postgresStore;
 
   // Create memory instance for this agent
   const memory = new Memory({
-    storage: new PostgresStore({
-      connectionString,
-    }),
+    storage,
     options: {
       lastMessages: 10,
       threads: {
@@ -212,7 +200,30 @@ You are an expert running coach with access to PeakFlow fitness data tools and p
 Focus on being encouraging, data-driven, and safety-conscious. Use their actual fitness metrics and personal context to provide personalized coaching advice.
   `,
     model: anthropic("claude-3-5-haiku-20241022"),
-    tools: tools,
+    tools: async ({ runtimeContext }) => {
+      // Get access token from runtime context
+      const accessToken = runtimeContext.get("accessToken");
+
+      if (!accessToken) {
+        console.warn("⚠️ No access token found in runtime context");
+        return {};
+      }
+
+      try {
+        // Dynamically import and create MCP client
+        const { createMcpClientWithToken } = await import("../mcp/peakflow-client");
+        const mcpClient = createMcpClientWithToken(accessToken);
+
+        // Get tools from the authenticated client
+        const tools = await mcpClient.getTools();
+        console.log(`✅ Running Coach dynamically loaded ${Object.keys(tools).length} PeakFlow tools`);
+
+        return tools;
+      } catch (error) {
+        console.error("❌ Failed to load PeakFlow tools:", error);
+        return {};
+      }
+    },
     memory: memory
   });
 }

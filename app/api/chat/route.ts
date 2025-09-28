@@ -1,91 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRunningCoachAgentWithToken } from '../../../src/lib/mastra/agents/running-coach';
+import { mastra } from '../../../src/lib/mastra';
+import { RuntimeContext } from "@mastra/core/runtime-context";
+import { validateAuth, AuthError } from '../../../src/lib/auth';
+import { logger } from '../../../src/lib/logger';
 
-// Helper function to safely log request details
-function logRequestDetails(req: NextRequest, context: string) {
-  const timestamp = new Date().toISOString();
-  const method = req.method;
-  const url = req.url;
-  const userAgent = req.headers.get('user-agent') || 'Unknown';
-  const contentType = req.headers.get('content-type') || 'Not specified';
-  const authHeader = req.headers.get('authorization');
-  
-  console.log(`[${timestamp}] ${context} - Chat API Request Details:`, {
-    method,
-    url,
-    userAgent,
-    contentType,
-    hasAuthHeader: !!authHeader,
-    authHeaderFormat: authHeader ? 
-      (authHeader.startsWith('Bearer ') ? 'Bearer token format' : 'Non-Bearer format') : 
-      'No auth header',
-    authHeaderLength: authHeader?.length || 0,
-    requestId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  });
-}
 
-// Helper function to log authentication failures
-function logAuthFailure(req: NextRequest, reason: string, details?: any) {
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] Chat API Authentication Failure:`, {
-    reason,
-    url: req.url,
-    method: req.method,
-    userAgent: req.headers.get('user-agent'),
-    referer: req.headers.get('referer'),
-    origin: req.headers.get('origin'),
-    details,
-    timestamp
-  });
-}
+type SupportRuntimeContext = {
+  accessToken: string;
+  userId: string;
+  username: string;
+};
+
 
 export async function POST(req: NextRequest) {
-  // Log incoming request details
-  logRequestDetails(req, 'INCOMING_REQUEST');
-  
+  const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  logger.info({
+    context: 'INCOMING_REQUEST',
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers.get('user-agent'),
+    contentType: req.headers.get('content-type'),
+    hasAuthHeader: !!req.headers.get('authorization'),
+    requestId
+  }, 'Chat API request received');
+
   try {
     const { messages } = await req.json();
-    
-    console.log('📥 Chat API: Received messages array:', {
-      messageCount: messages?.length || 0,
-      hasMessages: !!messages,
-      isArray: Array.isArray(messages)
-    });
-    
-    // Extract access token from Authorization header
-    console.log('🔍 All headers received:', Object.fromEntries(req.headers.entries()));
-    console.log('🔍 Authorization header (uppercase):', req.headers.get('Authorization'));
-    console.log('🔍 authorization header (lowercase):', req.headers.get('authorization'));
-    
-    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-    const accessToken = authHeader?.replace('Bearer ', '');
+    // Validate authentication and extract user information
+    let authResult;
+    try {
+      authResult = await validateAuth(req);
+      logger.info({
+        userId: authResult.userId,
+        username: authResult.username,
+        userActive: authResult.user.is_active,
+        userVerified: authResult.user.is_verified,
+        requestId
+      }, 'Authentication successful');
+    } catch (error) {
+      if (error instanceof AuthError) {
+        logger.error({
+          reason: error.message,
+          statusCode: error.statusCode,
+          errorType: 'AuthError',
+          url: req.url,
+          method: req.method,
+          userAgent: req.headers.get('user-agent'),
+          requestId
+        }, 'Authentication failure');
 
-    if (!accessToken) {
-      logAuthFailure(req, 'Missing or empty access token', {
-        authHeaderPresent: !!authHeader,
-        authHeaderValue: authHeader ? '[REDACTED]' : null,
-        authHeaderLength: authHeader?.length || 0
-      });
-      
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.statusCode }
+        );
+      }
+
+      logger.error({ error, requestId }, 'Unexpected authentication error');
       return NextResponse.json(
-        { error: 'Access token is required' },
-        { status: 401 }
+        { error: 'Authentication service error' },
+        { status: 500 }
       );
     }
 
-    console.log('🔐 Chat API: Access token extracted successfully:', {
+    // Extract access token for agent context
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    const accessToken = authHeader?.replace('Bearer ', '') || '';
+
+    logger.debug({
       tokenLength: accessToken.length,
-      tokenPrefix: accessToken.substring(0, 10) + '...',
-      tokenFormat: 'Bearer token detected'
-    });
+      tokenPrefix: accessToken.slice(0, 10) + '...',
+      requestId
+    }, 'Access token extracted for agent context');
 
     if (!messages || !Array.isArray(messages)) {
-      console.error('❌ Chat API: Invalid messages payload:', {
+      logger.error({
         hasMessages: !!messages,
         messageType: typeof messages,
         isArray: Array.isArray(messages),
-        messagesValue: messages
-      });
+        requestId
+      }, 'Invalid messages payload');
       
       return NextResponse.json(
         { error: 'Messages array is required' },
@@ -93,63 +86,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('🤖 Chat API: Creating running coach agent with token...');
+    logger.info({ requestId }, 'Creating running coach agent');
 
     try {
-      const agent = await createRunningCoachAgentWithToken(accessToken);
-      console.log('✅ Chat API: Running coach agent created successfully');
-      const memory = await agent.getMemory()
-      const {messages, uiMessages} = await memory!.query({threadId: 'default'})
-      console.log('🚀 Chat API: Starting stream with Mastra Agent...');
-      
-      // Convert UIMessages to simple format expected by Mastra Agent
-      const mastraMessages = messages.map((msg: any) => {
-        if (msg.parts && Array.isArray(msg.parts)) {
-          // Handle UIMessage format with parts array
-          const textParts = msg.parts.filter((part: any) => part.type === 'text');
-          const content = textParts.map((part: any) => part.text).join(' ');
-          return {
-            role: msg.role,
-            content: content
-          };
-        } else if (msg.content) {
-          // Handle already correct format
-          return {
-            role: msg.role,
-            content: msg.content
-          };
-        } else {
-          // Fallback for unexpected format
-          return {
-            role: msg.role || 'user',
-            content: JSON.stringify(msg)
-          };
-        }
-      });
+      const agent = mastra.getAgent('runningCoach');
+      const runtimeContext = new RuntimeContext<SupportRuntimeContext>();
+      runtimeContext.set('accessToken', accessToken);
+      runtimeContext.set('userId', authResult.userId);
+      runtimeContext.set('username', authResult.username);
+      logger.info({
+        userId: authResult.userId,
+        username: authResult.username,
+        requestId
+      }, 'Running coach agent created successfully');
+      // const memory = await agent.getMemory()
+      // const {messages, uiMessages} = await memory!.query({threadId: 'default'})
+      logger.info({ requestId }, 'Starting stream with Mastra Agent');
 
-      console.log('📝 Chat API: Converted messages for Mastra:', {
-        originalCount: messages.length,
-        convertedCount: mastraMessages.length,
-        sample: mastraMessages.slice(0, 2)
-      });
-      
-      // Use Mastra Agent's streamVNext method
-      const agentStream = await agent.streamVNext(mastraMessages, {
+      // Get the latest user message since Mastra handles message history
+      const latestMessage = messages[messages.length - 1];
+      logger.debug({
+        totalMessages: messages.length,
+        latestMessage: latestMessage,
+        requestId
+      }, 'Using latest user message');
+      const memory = await agent.getMemory();
+      const { messages: memMessages } = await memory!.query({ threadId: 'athlete' });
+      logger.debug({
+        memoryMessageCount: memMessages.length,
+        threadId: 'athlete',
+        requestId
+      }, 'Retrieved memory messages');
+      // Use Mastra Agent's streamVNext method with single user message
+      const agentStream = await agent.streamVNext([latestMessage], {
         maxSteps: 5, // Allow multiple tool calls
-        format: 'aisdk'
+        format: 'aisdk',
+        runtimeContext: runtimeContext,
+        memory: {
+          thread: 'athlete',
+          resource: authResult.username
+        }
       });
       
       // In an API route for frontend integration
       return agentStream.toUIMessageStreamResponse();
       
     } catch (agentError) {
-      console.error('🔥 Chat API: Failed to create agent or process stream:', {
+      logger.error({
         error: agentError,
         errorMessage: agentError instanceof Error ? agentError.message : 'Unknown agent error',
-        errorStack: agentError instanceof Error ? agentError.stack : undefined,
         tokenLength: accessToken?.length || 0,
-        timestamp: new Date().toISOString()
-      });
+        requestId
+      }, 'Failed to create agent or process stream');
       
       // Check if it's an authentication-related error
       if (agentError instanceof Error && 
@@ -157,11 +145,15 @@ export async function POST(req: NextRequest) {
            agentError.message.includes('Unauthorized') || 
            agentError.message.includes('Authentication failed'))) {
         
-        logAuthFailure(req, 'Agent creation failed - token may be invalid or expired', {
+        logger.error({
+          reason: 'Agent creation failed - token may be invalid or expired',
           agentErrorMessage: agentError.message,
           tokenProvided: true,
-          tokenLength: accessToken.length
-        });
+          tokenLength: accessToken.length,
+          url: req.url,
+          method: req.method,
+          requestId
+        }, 'Agent creation authentication failure');
         
         return NextResponse.json(
           { error: 'Authentication failed - token may be invalid or expired' },
@@ -173,15 +165,14 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('🚨 Chat API: Unhandled error:', {
+    logger.error({
       error,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : undefined,
       errorType: error?.constructor?.name || 'Unknown',
-      timestamp: new Date().toISOString(),
       url: req.url,
-      method: req.method
-    });
+      method: req.method,
+      requestId
+    }, 'Unhandled error in chat API');
 
     return NextResponse.json(
       {
@@ -195,16 +186,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] Chat API: Health check request received`, {
+  logger.info({
     url: req.url,
-    userAgent: req.headers.get('user-agent'),
-    timestamp
-  });
+    userAgent: req.headers.get('user-agent')
+  }, 'Health check request received');
   
-  return NextResponse.json({ 
+  return NextResponse.json({
     message: 'Running Coach Chat API is running',
-    timestamp,
+    timestamp: new Date().toISOString(),
     status: 'healthy'
   });
 }

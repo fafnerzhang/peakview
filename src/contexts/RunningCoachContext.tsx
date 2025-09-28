@@ -56,7 +56,7 @@ export function RunningCoachProvider({
 
   // Helper methods using the correct useChat API
   const askAboutTraining = React.useCallback((question: string) => {
-    chatConfig.sendMessage(`Training question: ${question}`);
+    chatConfig.sendMessage({'text': `Training question: ${question}`});
   }, [chatConfig]);
 
   const getPerformanceAnalysis = React.useCallback((timeframe?: string) => {
@@ -64,11 +64,11 @@ export function RunningCoachProvider({
       ? `Can you analyze my performance for ${timeframe}?`
       : 'Can you analyze my recent performance?';
 
-    chatConfig.sendMessage(content);
+    chatConfig.sendMessage({'text':content});
   }, [chatConfig]);
 
   const getWorkoutRecommendations = React.useCallback(() => {
-    chatConfig.sendMessage('Based on my recent training data, what workout would you recommend for today?');
+    chatConfig.sendMessage({'text':'Based on my recent training data, what workout would you recommend for today?'});
   }, [chatConfig]);
 
   const contextValue: RunningCoachState = {

@@ -24,6 +24,7 @@ interface EnhancedChatPanelProps {
   onRequestComparison?: (request: string) => void
   onOpenAnalysis?: () => void
   isAnalysisPanelVisible?: boolean
+  hasExistingPlans?: boolean
 }
 
 export function EnhancedChatPanel({
@@ -32,9 +33,10 @@ export function EnhancedChatPanel({
   onRemoveSelection,
   onClearSelection,
   onOpenPlanPanel,
-  isPlanPanelVisible = true,
+  isPlanPanelVisible = false,
   onOpenAnalysis,
-  isAnalysisPanelVisible = false
+  isAnalysisPanelVisible = false,
+  hasExistingPlans = false
 }: EnhancedChatPanelProps) {
   const [inputValue, setInputValue] = useState('')
   const { user, logout } = useAuth()
@@ -155,18 +157,6 @@ export function EnhancedChatPanel({
             </Button>
           </div>
         </div>
-
-        {/* Selection Tags */}
-        {selectedItems.length > 0 && onRemoveSelection && onClearSelection && (
-          <div className="mt-4">
-            <SelectionTags
-              selectedItems={selectedItems}
-              selectionDetails={selectionDetails}
-              onRemoveItem={onRemoveSelection}
-              onClearAll={onClearSelection}
-            />
-          </div>
-        )}
       </div>
 
       {/* Messages */}

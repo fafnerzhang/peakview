@@ -34,7 +34,127 @@ export function WorkoutPlanView({ onClose }: WorkoutPlanViewProps) {
   const [isAnalysisPanelVisible, setIsAnalysisPanelVisible] = useState(false)
   const [comparisonWorkouts, setComparisonWorkouts] = useState<WorkoutComparison[]>([])
   const [analysisType, setAnalysisType] = useState<'comparison' | 'progression' | 'performance'>('comparison')
-  const [trainingPhases, setTrainingPhases] = useState<TrainingPhase[]>([])
+  const [trainingPhases, setTrainingPhases] = useState<TrainingPhase[]>([
+    {
+      id: 'phase-1',
+      title: 'Base Building Phase',
+      description: 'Building aerobic base and endurance foundation',
+      type: 'general',
+      startDate: '2024-01-01',
+      endDate: '2024-01-28',
+      weeks: [
+        {
+          id: 'week-1',
+          title: 'Week 1: Base Building',
+          weekNumber: 1,
+          startDate: '2024-01-01',
+          endDate: '2024-01-07',
+          workouts: [
+            {
+              id: 'workout-1',
+              title: 'Easy Run',
+              description: 'Comfortable aerobic pace run to build base fitness',
+              date: '2024-01-01',
+              totalTime: '45 min',
+              totalDistance: '6 km',
+              difficulty: 'easy',
+              tss: 45,
+              workouts: [],
+              isCompleted: false
+            },
+            {
+              id: 'workout-2',
+              title: 'Interval Training',
+              description: '4x800m at threshold pace with 2min recovery',
+              date: '2024-01-03',
+              totalTime: '60 min',
+              totalDistance: '8 km',
+              difficulty: 'hard',
+              tss: 85,
+              workouts: [],
+              isCompleted: true
+            },
+            {
+              id: 'workout-3',
+              title: 'Recovery Run',
+              description: 'Easy recovery pace for active recovery',
+              date: '2024-01-05',
+              totalTime: '30 min',
+              totalDistance: '4 km',
+              difficulty: 'easy',
+              tss: 25,
+              workouts: [],
+              isCompleted: false
+            }
+          ]
+        },
+        {
+          id: 'week-2',
+          title: 'Week 2: Progressive Build',
+          weekNumber: 2,
+          startDate: '2024-01-08',
+          endDate: '2024-01-14',
+          workouts: [
+            {
+              id: 'workout-4',
+              title: 'Long Run',
+              description: 'Steady aerobic pace long run',
+              date: '2024-01-08',
+              totalTime: '75 min',
+              totalDistance: '12 km',
+              difficulty: 'moderate',
+              tss: 95,
+              workouts: [],
+              isCompleted: false
+            },
+            {
+              id: 'workout-5',
+              title: 'Tempo Run',
+              description: '20min tempo effort at lactate threshold',
+              date: '2024-01-10',
+              totalTime: '50 min',
+              totalDistance: '7 km',
+              difficulty: 'moderate',
+              tss: 75,
+              workouts: [],
+              isCompleted: false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'phase-2',
+      title: 'Speed Development Phase',
+      description: 'Developing speed and race pace efficiency',
+      type: 'specific',
+      startDate: '2024-02-01',
+      endDate: '2024-02-28',
+      weeks: [
+        {
+          id: 'week-3',
+          title: 'Week 3: Speed Work',
+          weekNumber: 3,
+          startDate: '2024-02-01',
+          endDate: '2024-02-07',
+          workouts: [
+            {
+              id: 'workout-6',
+              title: 'Track Intervals',
+              description: '6x400m at VO2max pace with 90s rest',
+              date: '2024-02-03',
+              totalTime: '55 min',
+              totalDistance: '8 km',
+              difficulty: 'hard',
+              tss: 110,
+              workouts: [],
+              isCompleted: false
+            }
+          ]
+        }
+      ]
+    }
+  ])
 
   const handlePlanGenerated = (plan: WorkoutPlan | TrainingPhase) => {
     // Check if this is a complete phase or a single workout
