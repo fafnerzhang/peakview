@@ -56,20 +56,20 @@ export function PhaseCard({
           </div>
           <p className="text-sm text-gray-600 mb-3">{phase.description}</p>
           
-          <div className="grid grid-cols-4 gap-4 text-sm">
-            <div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex-1 min-w-0">
               <span className="text-gray-500">Weeks</span>
               <div className="font-medium">{phaseSummary.totalWeeks}</div>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="text-gray-500">Total TSS</span>
               <div className="font-medium">{phaseSummary.totalTSS}</div>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="text-gray-500">Workouts</span>
               <div className="font-medium">{phaseSummary.totalWorkouts}</div>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="text-gray-500">Progress</span>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{phaseSummary.completionRate}%</span>

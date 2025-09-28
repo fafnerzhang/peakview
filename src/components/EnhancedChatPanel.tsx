@@ -12,6 +12,7 @@ import {
 } from './ai-elements/conversation'
 import { Message, MessageContent } from './ai-elements/message'
 import { Response } from './ai-elements/response'
+import { usePanelContext } from '../contexts/PanelContext'
 
 interface EnhancedChatPanelProps {
   onPlanGenerated?: (plan: any) => void
@@ -19,8 +20,6 @@ interface EnhancedChatPanelProps {
   selectionDetails?: { [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }
   onRemoveSelection?: (id: string) => void
   onClearSelection?: () => void
-  onOpenPlanPanel?: () => void
-  isPlanPanelVisible?: boolean
   onRequestComparison?: (request: string) => void
   onOpenAnalysis?: () => void
   isAnalysisPanelVisible?: boolean
@@ -32,10 +31,6 @@ export function EnhancedChatPanel({
   selectionDetails = {},
   onRemoveSelection,
   onClearSelection,
-  onOpenPlanPanel,
-  isPlanPanelVisible = false,
-  onOpenAnalysis,
-  isAnalysisPanelVisible = false,
   hasExistingPlans = false
 }: EnhancedChatPanelProps) {
   const [inputValue, setInputValue] = useState('')
@@ -52,8 +47,13 @@ export function EnhancedChatPanel({
     isInitialized,
     sendMessage: contextSendMessage
   } = useRunningCoachContext()
-
-  // Map new API to old API for compatibility
+  const {
+    isPlanPanelOpen,
+    isAnalysisPanelOpen,
+    setPlanPanelOpen,
+    setAnalysisPanelOpen
+  } = usePanelContext() 
+   // Map new API to old API for compatibility
   const status = isLoading ? 'loading' : 'ready'
   const sendMessage = contextSendMessage || (({ text }: { text: string }) => {
     console.warn('sendMessage not available in context');
@@ -125,21 +125,26 @@ export function EnhancedChatPanel({
           {/* Panel toggle buttons */}
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-500">
-              Need to {!isPlanPanelVisible && !isAnalysisPanelVisible ? 'access your ' : ''}
-              {!isPlanPanelVisible && onOpenPlanPanel && (
+              Need to {!isPlanPanelOpen && !isAnalysisPanelOpen ? 'access your ' : ''}
+              {!isPlanPanelOpen && (
                 <>
                   <button
-                    onClick={onOpenPlanPanel}
+                    onClick={() => {
+                      setPlanPanelOpen(true)
+                      setAnalysisPanelOpen(false)
+                    }}
                     className="text-green-600 hover:text-green-700 hover:underline"
                   >
                     training plans
                   </button>
-                  {!isAnalysisPanelVisible && onOpenAnalysis && ' or '}
+                  {!isAnalysisPanelOpen && ' or '}
                 </>
               )}
-              {!isAnalysisPanelVisible && onOpenAnalysis && (
+              {!isAnalysisPanelOpen && (
                 <button
-                  onClick={onOpenAnalysis}
+                  onClick={() => {
+                    setAnalysisPanelOpen(true)
+                    setPlanPanelOpen(false)}}
                   className="text-blue-600 hover:text-blue-700 hover:underline"
                 >
                   workout analysis

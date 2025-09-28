@@ -8,19 +8,20 @@ import { WorkoutDetailView } from './WorkoutDetailView'
 import { useSelection } from './hooks/useSelection'
 import { WorkoutPlanPanelProps, ViewState } from './types'
 import { findWorkoutById, findWeekById } from './utils'
+import { usePanelContext } from '../../contexts/PanelContext'
 
-export function WorkoutPlanPanel({ 
-  onRequestPlan, 
-  phases, 
-  onPlanUpdate, 
-  onClose, 
-  streamingWorkout, 
+export function WorkoutPlanPanel({
+  onRequestPlan,
+  phases,
+  onPlanUpdate,
+  streamingWorkout,
   onWorkoutSelect,
   onSelectionChange,
   onRemoveSelection,
   selectedItems: externalSelectedItems = [],
   selectionDetails: externalSelectionDetails = {}
-}: WorkoutPlanPanelProps) {
+}: Omit<WorkoutPlanPanelProps, 'onClose'>) {
+  const { setPlanPanelOpen } = usePanelContext()
   const [viewState, setViewState] = useState<ViewState>('plan-list')
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null)
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
@@ -126,7 +127,7 @@ export function WorkoutPlanPanel({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white border-l border-gray-200">
+    <div className="h-full flex flex-col bg-white border-l border-gray-200">
       {/* Header */}
       <div className="p-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
@@ -135,7 +136,7 @@ export function WorkoutPlanPanel({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={onClose}
+              onClick={() => setPlanPanelOpen(false)}
               variant="ghost"
               size="sm"
               className="text-gray-400 hover:text-gray-600"

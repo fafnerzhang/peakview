@@ -60,7 +60,7 @@ export function WeekDetailView({
           </Button>
         </div>
         
-        <div className="grid grid-cols-4 gap-4 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm">
           <div>
             <span className="text-gray-500">Total TSS</span>
             <div className="font-medium">{summary.totalTSS}</div>

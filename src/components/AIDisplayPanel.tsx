@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Progress } from './ui/progress'
 import { ScrollArea } from './ui/scroll-area'
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
+import { usePanelContext } from '../contexts/PanelContext'
 
 interface WorkoutComparison {
   id: string
@@ -29,11 +30,10 @@ interface WorkoutComparison {
 
 interface AIDisplayPanelProps {
   workouts: WorkoutComparison[]
-  onClose: () => void
   analysisType?: 'comparison' | 'progression' | 'performance'
-  onSelectionChange?: (selectedItems: string[], selectionDetails: { [id: string]: { type: 'workout', title: string } }) => void
+  onSelectionChange?: (selectedItems: string[], selectionDetails: { [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }) => void
   selectedItems?: string[]
-  selectionDetails?: { [id: string]: { type: 'workout', title: string } }
+  selectionDetails?: { [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }
 }
 
 const difficultyColors = {
@@ -76,14 +76,14 @@ const performanceMetrics = [
   { metric: 'Recovery', valueA: 75, valueB: 83, valueC: 79 },
 ]
 
-export function AIDisplayPanel({ 
-  workouts, 
-  onClose, 
-  analysisType = 'comparison', 
+export function AIDisplayPanel({
+  workouts,
+  analysisType = 'comparison',
   onSelectionChange,
   selectedItems: externalSelectedItems = [],
   selectionDetails: externalSelectionDetails = {}
 }: AIDisplayPanelProps) {
+  const { setAnalysisPanelOpen } = usePanelContext()
   const [activeTab, setActiveTab] = useState('overview')
   const [selectionMode, setSelectionMode] = useState<'none' | 'multi'>('none')
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set(externalSelectedItems))
@@ -467,7 +467,7 @@ export function AIDisplayPanel({
   const selectionRect = getSelectionRect()
 
   return (
-    <div className="h-screen flex flex-col bg-white border-l border-gray-200" ref={containerRef}>
+    <div className="h-full flex flex-col bg-white border-l border-gray-200" ref={containerRef}>
       {/* Header */}
       <div className="p-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
@@ -476,7 +476,7 @@ export function AIDisplayPanel({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={onClose}
+              onClick={() => setAnalysisPanelOpen(false)}
               variant="ghost"
               size="sm"
               className="text-gray-400 hover:text-gray-600"
@@ -558,13 +558,13 @@ export function AIDisplayPanel({
                   </div>
                   <div>
                     <div className="text-2xl font-medium text-gray-900">
-                      {Math.round(workouts.reduce((sum, w) => sum + w.tss, 0) / workouts.length)}
+                      {workouts.length > 0 ? Math.round(workouts.reduce((sum, w) => sum + w.tss, 0) / workouts.length) : 0}
                     </div>
                     <div className="text-sm text-gray-600">Avg TSS</div>
                   </div>
                   <div>
                     <div className="text-2xl font-medium text-gray-900">
-                      {Math.round((workouts.filter(w => w.isCompleted).length / workouts.length) * 100)}%
+                      {workouts.length > 0 ? Math.round((workouts.filter(w => w.isCompleted).length / workouts.length) * 100) : 0}%
                     </div>
                     <div className="text-sm text-gray-600">Completion</div>
                   </div>

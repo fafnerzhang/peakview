@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { ImperativePanelHandle } from 'react-resizable-panels'
 import { EnhancedChatPanel } from './EnhancedChatPanel'
 import { WorkoutPlanPanel } from './plan/WorkoutPlanPanel'
 import { AIDisplayPanel } from './AIDisplayPanel'
 import { WorkoutBlockData } from './WorkoutBlock'
 import { TrainingPhase, TrainingWeek, WorkoutPlan } from './plan/types'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/resizable'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../../components/ui/resizable'
+import { PanelProvider, usePanelContext } from '../contexts/PanelContext'
 
 interface WorkoutComparison {
   id: string
@@ -27,13 +29,61 @@ interface WorkoutPlanViewProps {
   onClose: () => void
 }
 
-export function WorkoutPlanView({ onClose }: WorkoutPlanViewProps) {
+function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectionDetails, setSelectionDetails] = useState<{ [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }>({})
-  const [isPlanPanelVisible, setIsPlanPanelVisible] = useState(false)
-  const [isAnalysisPanelVisible, setIsAnalysisPanelVisible] = useState(false)
   const [comparisonWorkouts, setComparisonWorkouts] = useState<WorkoutComparison[]>([])
   const [analysisType, setAnalysisType] = useState<'comparison' | 'progression' | 'performance'>('comparison')
+
+  // Local panel refs
+  const planPanelRef = useRef<ImperativePanelHandle>(null)
+  const analysisPanelRef = useRef<ImperativePanelHandle>(null)
+  const blankRef = useRef<ImperativePanelHandle>(null)
+  const chatRef = useRef<ImperativePanelHandle>(null)
+  // Use panel context for state only
+  const {
+    isPlanPanelOpen,
+    isAnalysisPanelOpen,
+    setPlanPanelOpen,
+    setAnalysisPanelOpen
+  } = usePanelContext()
+
+  // Handle panel operations with useEffect
+  useEffect(() => {
+    console.log('Panel states changed:', { isPlanPanelOpen, isAnalysisPanelOpen })
+    console.log('Blank panel size:', blankRef.current?.getSize())
+    // Control panels imperatively
+    if (isPlanPanelOpen && !isAnalysisPanelOpen) {
+      console.log('Opening plan panel')
+      analysisPanelRef.current?.collapse()
+      planPanelRef.current?.expand(40)
+    } else if (!isPlanPanelOpen && isAnalysisPanelOpen) {
+      console.log('Opening analysis panel')
+      if (planPanelRef.current){
+        console.log('Plan panel collapsed')
+      }
+      analysisPanelRef.current?.expand(40)
+    } else {
+      console.log('Closing all panels')
+      planPanelRef.current?.collapse()
+      console.log(`plan panel collapsed: ${planPanelRef.current?.isCollapsed()}`)
+      analysisPanelRef.current?.collapse()
+      chatRef.current?.expand(0.999)
+    }
+    console.log('Plan panel size:', planPanelRef.current?.getSize())
+    console.log('Analysis panel size:', analysisPanelRef.current?.getSize())
+    console.log('Chat panel size:', chatRef.current?.getSize())
+    
+  }, [isPlanPanelOpen, isAnalysisPanelOpen])
+
+  // Initial collapse on mount
+  useEffect(() => {
+    // Collapse both panels initially since both states start as false
+    setTimeout(() => {
+      planPanelRef.current?.collapse()
+      analysisPanelRef.current?.collapse()
+    }, 100)
+  }, [])
   const [trainingPhases, setTrainingPhases] = useState<TrainingPhase[]>([
     {
       id: 'phase-1',
@@ -252,26 +302,9 @@ export function WorkoutPlanView({ onClose }: WorkoutPlanViewProps) {
     // Sync to all panels by clearing their selection states
   }
 
-  const handleClosePlanPanel = () => {
-    setIsPlanPanelVisible(false)
-  }
-
-  const handleOpenPlanPanel = () => {
-    // Only allow opening if there are plans
-    if (trainingPhases.length > 0) {
-      setIsPlanPanelVisible(true)
-      setIsAnalysisPanelVisible(false)
-    }
-  }
-
-  const handleCloseAnalysisPanel = () => {
-    setIsAnalysisPanelVisible(false)
-    setComparisonWorkouts([])
-  }
-
   const handleOpenAnalysisPanel = () => {
-    setIsAnalysisPanelVisible(true)
-    setIsPlanPanelVisible(false)
+    setPlanPanelOpen(false)
+    setAnalysisPanelOpen(true)
     // Load sample comparison data for demonstration
     handleRequestComparison('Show analysis')
   }
@@ -279,8 +312,8 @@ export function WorkoutPlanView({ onClose }: WorkoutPlanViewProps) {
   const handleOpenComparison = (workouts: WorkoutComparison[], type: 'comparison' | 'progression' | 'performance' = 'comparison') => {
     setComparisonWorkouts(workouts)
     setAnalysisType(type)
-    setIsAnalysisPanelVisible(true)
-    setIsPlanPanelVisible(false)
+    setPlanPanelOpen(false)
+    setAnalysisPanelOpen(true)
   }
 
   // Sample function to demonstrate workout comparison
@@ -340,85 +373,87 @@ export function WorkoutPlanView({ onClose }: WorkoutPlanViewProps) {
 
   return (
     <div className="h-screen bg-gray-50">
-      {/* No secondary panels - just chat */}
-      {!isPlanPanelVisible && !isAnalysisPanelVisible && (
-        <EnhancedChatPanel 
-          onPlanGenerated={handlePlanGenerated}
-          selectedItems={selectedItems}
-          selectionDetails={selectionDetails}
-          onRemoveSelection={handleRemoveSelection}
-          onClearSelection={handleClearSelection}
-          onOpenPlanPanel={trainingPhases.length > 0 ? handleOpenPlanPanel : undefined}
-          isPlanPanelVisible={isPlanPanelVisible}
-          onRequestComparison={handleRequestComparison}
-          onOpenAnalysis={handleOpenAnalysisPanel}
-          isAnalysisPanelVisible={isAnalysisPanelVisible}
-          hasExistingPlans={trainingPhases.length > 0}
+      <ResizablePanelGroup direction="horizontal" className="h-full" >
+        {/* Chat Panel - always visible */}
+        <ResizablePanel
+          id='blank'
+          ref={blankRef}
+          defaultSize={0.0001}
+          minSize={0}
+          maxSize={0}
+          collapsible={true}
+          collapsedSize={0}
         />
-      )}
-
-      {/* Resizable layout when secondary panel is open */}
-      {(isPlanPanelVisible || isAnalysisPanelVisible) && (
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Chat Panel */}
-          <ResizablePanel 
-            defaultSize={isPlanPanelVisible ? 60 : 40} 
-            minSize={30}
-            maxSize={80}
-          >
-            <div className="h-full border-r border-gray-200">
-              <EnhancedChatPanel 
-                onPlanGenerated={handlePlanGenerated}
-                selectedItems={selectedItems}
-                selectionDetails={selectionDetails}
-                onRemoveSelection={handleRemoveSelection}
-                onClearSelection={handleClearSelection}
-                onOpenPlanPanel={trainingPhases.length > 0 ? handleOpenPlanPanel : undefined}
-                isPlanPanelVisible={isPlanPanelVisible}
-                onRequestComparison={handleRequestComparison}
-                onOpenAnalysis={handleOpenAnalysisPanel}
-                isAnalysisPanelVisible={isAnalysisPanelVisible}
-                hasExistingPlans={trainingPhases.length > 0}
-              />
-            </div>
+          <ResizableHandle />
+        <ResizablePanel
+          id="chat-panel"
+          defaultSize={100}
+          minSize={30}
+          maxSize={100}
+        >
+          <div className="h-full border-r border-gray-200">
+            <EnhancedChatPanel
+              onPlanGenerated={handlePlanGenerated}
+              selectedItems={selectedItems}
+              selectionDetails={selectionDetails}
+              onRemoveSelection={handleRemoveSelection}
+              onClearSelection={handleClearSelection}
+              onRequestComparison={handleRequestComparison}
+              hasExistingPlans={trainingPhases.length > 0}
+            />
+          </div>
+        </ResizablePanel>
+        { isPlanPanelOpen ? <ResizableHandle withHandle /> : null }
+        {isPlanPanelOpen && (
+        <ResizablePanel
+          ref={planPanelRef}
+          id='plan-panel'
+          defaultSize={40}
+          minSize={0}
+          maxSize={50}
+          collapsible={true}
+          collapsedSize={0}
+        >
+          <WorkoutPlanPanel
+            onRequestPlan={handlePlanRequest}
+            phases={trainingPhases}
+            onPlanUpdate={handlePlanUpdate}
+            onSelectionChange={handleSelectionChange}
+            selectedItems={selectedItems}
+            selectionDetails={selectionDetails}
+          />
           </ResizablePanel>
-
-          {/* Resizable Handle */}
-          <ResizableHandle withHandle />
-
-          {/* Secondary Panel */}
-          <ResizablePanel 
-            defaultSize={isPlanPanelVisible ? 40 : 60}
-            minSize={20}
-            maxSize={70}
-          >
-            {/* Workout Plan Panel */}
-            {isPlanPanelVisible && (
-              <WorkoutPlanPanel 
-                onRequestPlan={handlePlanRequest}
-                phases={trainingPhases}
-                onPlanUpdate={handlePlanUpdate}
-                onClose={handleClosePlanPanel}
-                onSelectionChange={handleSelectionChange}
-                selectedItems={selectedItems}
-                selectionDetails={selectionDetails}
-              />
-            )}
-
-            {/* AI Analysis Panel */}
-            {isAnalysisPanelVisible && (
-              <AIDisplayPanel
-                workouts={comparisonWorkouts}
-                onClose={handleCloseAnalysisPanel}
-                analysisType={analysisType}
-                onSelectionChange={handleSelectionChange}
-                selectedItems={selectedItems}
-                selectionDetails={selectionDetails}
-              />
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      )}
+          )}
+        
+        {isAnalysisPanelOpen ? <ResizableHandle withHandle /> : null}
+        <ResizablePanel
+          ref={analysisPanelRef}
+          id='analysis-panel'
+          defaultSize={0}
+          minSize={0}
+          maxSize={70}
+          collapsible={true}
+          collapsedSize={0}
+        >
+          {isAnalysisPanelOpen && (
+            <AIDisplayPanel
+              workouts={comparisonWorkouts}
+              analysisType={analysisType}
+              onSelectionChange={handleSelectionChange}
+              selectedItems={selectedItems}
+              selectionDetails={selectionDetails}
+            />
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
+  )
+}
+
+export function WorkoutPlanView(props: WorkoutPlanViewProps) {
+  return (
+    <PanelProvider>
+      <WorkoutPlanViewContent {...props} />
+    </PanelProvider>
   )
 }
