@@ -43,7 +43,7 @@ export function RunningCoachProvider({
 }: RunningCoachProviderProps) {
   const chatConfig = useChat({
     transport: new DefaultChatTransport({
-      api: '/api/chat',
+      api: '/api/workout',
       headers: accessToken ? {
         Authorization: `Bearer ${accessToken}`,
       } : {},

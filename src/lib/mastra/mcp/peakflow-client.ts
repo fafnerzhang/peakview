@@ -113,12 +113,12 @@ export async function createAuthenticatedPeakflowClient(
 /**
  * Create MCP Client with existing access token
  */
-export function createMcpClientWithToken(accessToken: string) {
+export function createMcpClientWithToken(accessToken: string, apiBaseUrl: string = getApiBaseUrl(), apiPrefix: string = "/mcp") {
   return new MCPClient({
     id: `peakflow-api-client-${Date.now()}`,
     servers: {
       peakflow: {
-        url: new URL(`${getApiBaseUrl()}/mcp`),
+        url: new URL(`${apiBaseUrl}${apiPrefix}`),
         requestInit: {
           headers: {
             "Authorization": `Bearer ${accessToken}`,
