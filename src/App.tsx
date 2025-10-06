@@ -7,7 +7,8 @@ import { Dashboard } from './components/Dashboard'
 import { ActivityDetail } from './components/ActivityDetail'
 import { ActivityOverview } from './components/ActivityOverview'
 import { WorkoutPlanView } from './components/WorkoutPlanView'
-
+import { Mastra } from '@mastra/core'
+import { MastraReactProvider } from '@mastra/react'
 type ViewType = 'dashboard' | 'activities' | 'activity-detail' | 'calendar' | 'goals' | 'settings' | 'chat'
 
 function AppContent() {
@@ -78,19 +79,22 @@ function AppContent() {
   if (!isAuthenticated) {
     return <LoginPage />
   }
-
+  const baseUrl = 'http://localhost:4114/'
   return (
-    <RunningCoachProvider
-      accessToken={accessToken}
-      onError={(error) => console.error('Running Coach error:', error)}
-    >
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar activeView={activeView} onViewChange={handleViewChange} />
-        <div className={`flex-1 ${activeView === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
-          {renderMainContent()}
+    <MastraReactProvider baseUrl={baseUrl} headers={{ Authorization: `Bearer ${accessToken}` }}>
+      <RunningCoachProvider
+        accessToken={accessToken}
+        agentId='runningCoach'
+        onError={(error) => console.error('Running Coach error:', error)}
+      >
+        <div className="flex h-screen bg-gray-50">
+          <Sidebar activeView={activeView} onViewChange={handleViewChange} />
+          <div className={`flex-1 ${activeView === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
+            {renderMainContent()}
+          </div>
         </div>
-      </div>
-    </RunningCoachProvider>
+      </RunningCoachProvider>
+    </MastraReactProvider>
   )
 }
 

@@ -5,7 +5,7 @@ import { WorkoutPlanPanel } from './plan/WorkoutPlanPanel'
 import { AIDisplayPanel } from './AIDisplayPanel'
 import { WorkoutBlockData } from './WorkoutBlock'
 import { TrainingPhase, TrainingWeek, WorkoutPlan } from './plan/types'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../../components/ui/resizable'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/src/components/ui/resizable'
 import { PanelProvider, usePanelContext } from '../contexts/PanelContext'
 
 interface WorkoutComparison {

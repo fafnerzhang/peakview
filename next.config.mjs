@@ -3,6 +3,7 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
+  serverExternalPackages: ["@mastra/*"],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -13,5 +14,4 @@ const nextConfig = {
     unoptimized: true,
   },
 }
-
-export default nextConfig
+export default nextConfig;
