@@ -5,6 +5,7 @@ import { useChat, toUIMessage, MastraReactProvider } from '@mastra/react';
 import { RuntimeContext } from '@mastra/core/runtime-context';
 import type { ChunkType } from '@mastra/core/stream';
 import type { UIMessage } from '@ai-sdk/react';
+import { fetchUserIndicators } from '@/src/lib/userIndicators';
 
 // MastraUIMessage type from @mastra/react
 type MastraUIMessage = UIMessage<any, any, any>;
@@ -52,9 +53,36 @@ export function RunningCoachProvider({
     const runtimeContext = new RuntimeContext()
     runtimeContext.set('accessToken', accessToken);
     runtimeContext.set('coachId', 'jack-daniels'); // Example coachId, could be dynamic
+
     const chatConfig = useChat<MastraUIMessage>({
       agentId: agentId,
     });
+
+    // Fetch user indicators when access token is available
+    useEffect(() => {
+      const loadUserIndicators = async () => {
+        if (accessToken) {
+          try {
+            const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const indicators = await fetchUserIndicators(accessToken, apiBaseUrl);
+
+            // Add indicators to runtime context for Mastra agents
+            if (indicators) {
+              runtimeContext.set('userIndicators', indicators);
+              console.log('✅ User indicators loaded and added to runtime context');
+            } else {
+              console.log('ℹ️ User has not set up indicators yet');
+            }
+          } catch (err) {
+            console.error('Failed to fetch user indicators:', err);
+            // Don't set error state - indicators are optional
+          }
+        }
+      };
+
+      loadUserIndicators();
+    }, [accessToken, runtimeContext]);
+
     useEffect(()=>{
       console.log('Messages updated:', chatConfig.messages[chatConfig.messages.length - 1]);
     }, [chatConfig.messages])
