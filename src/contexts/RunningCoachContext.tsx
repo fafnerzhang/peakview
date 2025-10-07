@@ -81,7 +81,7 @@ export function RunningCoachProvider({
       };
 
       loadUserIndicators();
-    }, [accessToken, runtimeContext]);
+    }, [accessToken]);
 
     useEffect(()=>{
       console.log('Messages updated:', chatConfig.messages[chatConfig.messages.length - 1]);
@@ -90,8 +90,6 @@ export function RunningCoachProvider({
     // Single streamMessage helper - use stream() with built-in toUIMessage
     const streamMessage = React.useCallback(async (message: string) => {
       setError(null);
-      console.log(`accessToken in streamMessage: ${runtimeContext.get('accessToken')}`);
-
       chatConfig.setMessages((prev) => [
         ...prev,
         {
@@ -105,12 +103,10 @@ export function RunningCoachProvider({
         await chatConfig.stream({
           coreUserMessages: [
             { role: 'user', content: message }
-          ], // Use 'message' instead of 'coreUserMessages' for proper history management
+          ], 
           runtimeContext: runtimeContext,
           threadId: 'running-coach-thread',
           onChunk: (chunk: ChunkType, conversation: MastraUIMessage[]) => {
-            // Use the built-in toUIMessage from @mastra/react
-            // It handles all chunk types: text, tool-call, tool-result, etc.
             return toUIMessage({ chunk, conversation });
           }
         });

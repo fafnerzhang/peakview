@@ -44,7 +44,7 @@ interface WeekCardProps {
 type WorkflowUIState = 'streaming' | 'success' | 'failed' | 'pending'
 
 interface WorkoutPlan {
-  id: string
+  workout_id: string
   title: string
   phase_id?: string
   date: string
@@ -241,7 +241,7 @@ export function WeekCard({ toolName, input, output, result, payload, onAggregate
                     workout={workoutPlan}
                     isAdded={workflowStatus === 'success' || autoIntegrated}
                     onSelect={(id) => setSelectedWorkout(selectedWorkout === id ? null : id)}
-                    isSelected={selectedWorkout === workoutPlan.id}
+                    isSelected={selectedWorkout === workoutPlan.workout_id}
                   />
                 )
               })

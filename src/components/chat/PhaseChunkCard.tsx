@@ -46,12 +46,12 @@ interface PhaseChunkCardProps {
 type WorkflowUIState = 'streaming' | 'success' | 'failed' | 'pending'
 
 interface PhaseData {
-  id?: string
+  phase_id?: string
   name: string
   tag: string
   description: string
   weeks: Array<{
-    id: string
+    week_id: string
     start_date: string
     end_date: string
     description: string
@@ -164,16 +164,16 @@ export function PhaseChunkCard({ toolName, input, output, result, payload, onAdd
     const lastWeek = phaseData.weeks[phaseData.weeks.length - 1]
 
     return {
-      id: `${phaseData.id || phaseData.tag}-${uniqueId}`,
+      id: `${phaseData.phase_id || phaseData.tag}-${uniqueId}`,
       title: phaseData.name,
       description: phaseData.description,
       type: getPhaseType(phaseData.tag),
       startDate: firstWeek?.start_date || new Date().toISOString(),
       endDate: lastWeek?.end_date || new Date().toISOString(),
       weeks: (phaseData.weeks || []).map(week => ({
-        id: `${week.id}-${uniqueId}`,
+        id: `${week.week_id}-${uniqueId}`,
         title: week.description,
-        weekNumber: parseInt(week.id.split('-')[1]) || 1,
+        weekNumber: parseInt(week.week_id.split('-')[1]) || 1,
         startDate: week.start_date,
         endDate: week.end_date,
         workouts: (week.critical_workouts || []).map((workout) => ({
