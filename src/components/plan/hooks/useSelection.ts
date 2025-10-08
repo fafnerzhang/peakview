@@ -67,26 +67,26 @@ export const useSelection = ({
 
   const notifySelectionChange = useCallback((selectedSet: Set<string>) => {
     const selectionDetails: { [id: string]: { type: 'phase' | 'week' | 'workout', title: string } } = {}
-    
+
     selectedSet.forEach(id => {
       const phase = findPhaseById(phases, id)
       if (phase) {
         selectionDetails[id] = { type: 'phase', title: phase.title }
         return
       }
-      
+
       const week = findWeekById(id)
       if (week) {
         selectionDetails[id] = { type: 'week', title: week.title }
         return
       }
-      
+
       const workout = findWorkoutById(id)
       if (workout) {
         selectionDetails[id] = { type: 'workout', title: workout.title }
       }
     })
-    
+
     onSelectionChange?.(Array.from(selectedSet), selectionDetails)
   }, [phases, findWeekById, findWorkoutById, onSelectionChange])
 

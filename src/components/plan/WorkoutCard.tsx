@@ -77,7 +77,11 @@ export function WorkoutCard({
           </Badge>
         </div>
         
-        <div className={`flex items-center gap-3 text-gray-500 ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
+        <div className={`flex flex-wrap items-center gap-3 text-gray-500 ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
+          <div className="flex items-center gap-1">
+            <Calendar className={iconClasses[size]} />
+            <span>{new Date(workout.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', timeZone: 'Asia/Taipei' })}</span>
+          </div>
           <div className="flex items-center gap-1">
             <Clock className={iconClasses[size]} />
             <span>{workout.totalTime}</span>

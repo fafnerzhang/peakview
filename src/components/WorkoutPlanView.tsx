@@ -1,12 +1,13 @@
-import { useEffect, useState, useRef } from 'react'
-import { ImperativePanelHandle } from 'react-resizable-panels'
+import { useEffect, useState } from 'react'
 import { EnhancedChatPanel } from './EnhancedChatPanel'
 import { WorkoutPlanPanel } from './plan/WorkoutPlanPanel'
 import { AIDisplayPanel } from './AIDisplayPanel'
 import { WorkoutBlockData } from './WorkoutBlock'
-import { TrainingPhase, TrainingWeek, WorkoutPlan } from './plan/types'
+import { TrainingPhase, WorkoutPlan } from './plan/types'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/src/components/ui/resizable'
 import { PanelProvider, usePanelContext } from '../contexts/PanelContext'
+import { useRunningCoachContext } from '../contexts/RunningCoachContext'
+import { transformContextPhasesToUI } from './plan/phaseTransformer'
 
 interface WorkoutComparison {
   id: string
@@ -29,17 +30,21 @@ interface WorkoutPlanViewProps {
   onClose: () => void
 }
 
-function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
+function WorkoutPlanViewContent(_props: WorkoutPlanViewProps) {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectionDetails, setSelectionDetails] = useState<{ [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }>({})
   const [comparisonWorkouts, setComparisonWorkouts] = useState<WorkoutComparison[]>([])
   const [analysisType, setAnalysisType] = useState<'comparison' | 'progression' | 'performance'>('comparison')
 
-  // Local panel refs
-  const planPanelRef = useRef<ImperativePanelHandle>(null)
-  const analysisPanelRef = useRef<ImperativePanelHandle>(null)
-  const blankRef = useRef<ImperativePanelHandle>(null)
-  const chatRef = useRef<ImperativePanelHandle>(null)
+  // Get phases from RunningCoachContext
+  const {
+    phases: contextPhases,
+    isSyncingPhases,
+    setSelectedPhases,
+    setSelectedWeeks,
+    setSelectedWorkouts
+  } = useRunningCoachContext()
+
   // Use panel context for state only
   const {
     isPlanPanelOpen,
@@ -48,163 +53,29 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
     setAnalysisPanelOpen
   } = usePanelContext()
 
-  // Handle panel operations with useEffect
-  useEffect(() => {
-    console.log('Panel states changed:', { isPlanPanelOpen, isAnalysisPanelOpen })
-    console.log('Blank panel size:', blankRef.current?.getSize())
-    // Control panels imperatively
-    if (isPlanPanelOpen && !isAnalysisPanelOpen) {
-      console.log('Opening plan panel')
-      analysisPanelRef.current?.collapse()
-      planPanelRef.current?.expand(40)
-    } else if (!isPlanPanelOpen && isAnalysisPanelOpen) {
-      console.log('Opening analysis panel')
-      if (planPanelRef.current){
-        console.log('Plan panel collapsed')
-      }
-      analysisPanelRef.current?.expand(40)
-    } else {
-      console.log('Closing all panels')
-      planPanelRef.current?.collapse()
-      console.log(`plan panel collapsed: ${planPanelRef.current?.isCollapsed()}`)
-      analysisPanelRef.current?.collapse()
-      chatRef.current?.expand(0.999)
-    }
-    console.log('Plan panel size:', planPanelRef.current?.getSize())
-    console.log('Analysis panel size:', analysisPanelRef.current?.getSize())
-    console.log('Chat panel size:', chatRef.current?.getSize())
-    
-  }, [isPlanPanelOpen, isAnalysisPanelOpen])
+  // Transform context phases to UI phases and maintain local state
+  const [trainingPhases, setTrainingPhases] = useState<TrainingPhase[]>([])
 
-  // Initial collapse on mount
+  // Sync context phases to local UI state
   useEffect(() => {
-    // Collapse both panels initially since both states start as false
-    setTimeout(() => {
-      planPanelRef.current?.collapse()
-      analysisPanelRef.current?.collapse()
-    }, 100)
-  }, [])
-  const [trainingPhases, setTrainingPhases] = useState<TrainingPhase[]>([
-    {
-      id: 'phase-1',
-      title: 'Base Building Phase',
-      description: 'Building aerobic base and endurance foundation',
-      type: 'general',
-      startDate: '2024-01-01',
-      endDate: '2024-01-28',
-      weeks: [
-        {
-          id: 'week-1',
-          title: 'Week 1: Base Building',
-          weekNumber: 1,
-          startDate: '2024-01-01',
-          endDate: '2024-01-07',
-          workouts: [
-            {
-              id: 'workout-1',
-              title: 'Easy Run',
-              description: 'Comfortable aerobic pace run to build base fitness',
-              date: '2024-01-01',
-              totalTime: '45 min',
-              totalDistance: '6 km',
-              difficulty: 'easy',
-              tss: 45,
-              workouts: [],
-              isCompleted: false
-            },
-            {
-              id: 'workout-2',
-              title: 'Interval Training',
-              description: '4x800m at threshold pace with 2min recovery',
-              date: '2024-01-03',
-              totalTime: '60 min',
-              totalDistance: '8 km',
-              difficulty: 'hard',
-              tss: 85,
-              workouts: [],
-              isCompleted: true
-            },
-            {
-              id: 'workout-3',
-              title: 'Recovery Run',
-              description: 'Easy recovery pace for active recovery',
-              date: '2024-01-05',
-              totalTime: '30 min',
-              totalDistance: '4 km',
-              difficulty: 'easy',
-              tss: 25,
-              workouts: [],
-              isCompleted: false
-            }
-          ]
-        },
-        {
-          id: 'week-2',
-          title: 'Week 2: Progressive Build',
-          weekNumber: 2,
-          startDate: '2024-01-08',
-          endDate: '2024-01-14',
-          workouts: [
-            {
-              id: 'workout-4',
-              title: 'Long Run',
-              description: 'Steady aerobic pace long run',
-              date: '2024-01-08',
-              totalTime: '75 min',
-              totalDistance: '12 km',
-              difficulty: 'moderate',
-              tss: 95,
-              workouts: [],
-              isCompleted: false
-            },
-            {
-              id: 'workout-5',
-              title: 'Tempo Run',
-              description: '20min tempo effort at lactate threshold',
-              date: '2024-01-10',
-              totalTime: '50 min',
-              totalDistance: '7 km',
-              difficulty: 'moderate',
-              tss: 75,
-              workouts: [],
-              isCompleted: false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'phase-2',
-      title: 'Speed Development Phase',
-      description: 'Developing speed and race pace efficiency',
-      type: 'specific',
-      startDate: '2024-02-01',
-      endDate: '2024-02-28',
-      weeks: [
-        {
-          id: 'week-3',
-          title: 'Week 3: Speed Work',
-          weekNumber: 3,
-          startDate: '2024-02-01',
-          endDate: '2024-02-07',
-          workouts: [
-            {
-              id: 'workout-6',
-              title: 'Track Intervals',
-              description: '6x400m at VO2max pace with 90s rest',
-              date: '2024-02-03',
-              totalTime: '55 min',
-              totalDistance: '8 km',
-              difficulty: 'hard',
-              tss: 110,
-              workouts: [],
-              isCompleted: false
-            }
-          ]
-        }
-      ]
+    console.log('🔍 Context phases changed:', contextPhases)
+    console.log('🔍 Context phases length:', contextPhases.length)
+    console.log('🔍 isSyncingPhases:', isSyncingPhases)
+
+    if (contextPhases.length > 0) {
+      console.log('🔄 Transforming context phases to UI format...')
+      try {
+        const uiPhases = transformContextPhasesToUI(contextPhases)
+        console.log('✅ Transformed UI phases:', uiPhases)
+        setTrainingPhases(uiPhases)
+      } catch (error) {
+        console.error('❌ Error transforming phases:', error)
+      }
+    } else {
+      console.log('⚠️ No context phases to transform')
+      setTrainingPhases([])
     }
-  ])
+  }, [contextPhases, isSyncingPhases])
 
   const handlePlanGenerated = (plan: WorkoutPlan | TrainingPhase) => {
     // Check if this is a complete phase or a single workout
@@ -223,14 +94,14 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
           title: 'General Preparation Phase',
           description: 'Building aerobic base and running form',
           type: 'general',
-          startDate: new Date().toLocaleDateString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          startDate: new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }),
           weeks: [{
             id: 'week1',
             title: 'Week 1: Base Building',
             weekNumber: 1,
-            startDate: new Date().toLocaleDateString(),
-            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            startDate: new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }),
+            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' }),
             workouts: [workout]
           }]
         }
@@ -283,6 +154,43 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
   const handleSelectionChange = (items: string[], details: { [id: string]: { type: 'phase' | 'week' | 'workout', title: string } }) => {
     setSelectedItems(items)
     setSelectionDetails(details)
+
+    // Extract phase objects
+    const phaseObjects = items
+      .filter(id => details[id]?.type === 'phase')
+      .map(phaseId => trainingPhases.find(p => p.id === phaseId))
+      .filter(p => p !== undefined)
+
+    // Extract week objects
+    const weekObjects = items
+      .filter(id => details[id]?.type === 'week')
+      .map(weekId => {
+        for (const phase of trainingPhases) {
+          const week = phase.weeks.find(w => w.id === weekId)
+          if (week) return week
+        }
+        return null
+      })
+      .filter(w => w !== null)
+
+    // Extract workout objects
+    const workoutObjects = items
+      .filter(id => details[id]?.type === 'workout')
+      .map(workoutId => {
+        for (const phase of trainingPhases) {
+          for (const week of phase.weeks) {
+            const workout = week.workouts.find(w => w.id === workoutId)
+            if (workout) return workout
+          }
+        }
+        return null
+      })
+      .filter(w => w !== null)
+
+    // Update context with all selected items
+    setSelectedPhases(phaseObjects)
+    setSelectedWeeks(weekObjects)
+    setSelectedWorkouts(workoutObjects)
   }
 
   const handleRemoveSelection = (id: string) => {
@@ -302,13 +210,6 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
     // Sync to all panels by clearing their selection states
   }
 
-  const handleOpenAnalysisPanel = () => {
-    setPlanPanelOpen(false)
-    setAnalysisPanelOpen(true)
-    // Load sample comparison data for demonstration
-    handleRequestComparison('Show analysis')
-  }
-
   const handleOpenComparison = (workouts: WorkoutComparison[], type: 'comparison' | 'progression' | 'performance' = 'comparison') => {
     setComparisonWorkouts(workouts)
     setAnalysisType(type)
@@ -317,7 +218,7 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
   }
 
   // Sample function to demonstrate workout comparison
-  const handleRequestComparison = (request: string) => {
+  const handleRequestComparison = (_request: string) => {
     // This would be called from the chat panel when AI needs to show comparisons
     // For demo purposes, let's create some sample comparison data
     const sampleWorkouts: WorkoutComparison[] = [
@@ -373,23 +274,12 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
 
   return (
     <div className="h-screen bg-gray-50">
-      <ResizablePanelGroup direction="horizontal" className="h-full" >
+      <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Chat Panel - always visible */}
         <ResizablePanel
-          id='blank'
-          ref={blankRef}
-          defaultSize={0.0001}
-          minSize={0}
-          maxSize={0}
-          collapsible={true}
-          collapsedSize={0}
-        />
-          <ResizableHandle />
-        <ResizablePanel
           id="chat-panel"
-          defaultSize={100}
+          defaultSize={isPlanPanelOpen || isAnalysisPanelOpen ? 60 : 100}
           minSize={30}
-          maxSize={100}
         >
           <div className="h-full border-r border-gray-200">
             <EnhancedChatPanel
@@ -403,48 +293,49 @@ function WorkoutPlanViewContent({ onClose }: WorkoutPlanViewProps) {
             />
           </div>
         </ResizablePanel>
-        { isPlanPanelOpen ? <ResizableHandle withHandle /> : null }
+
+        {/* Plan Panel - conditionally rendered */}
         {isPlanPanelOpen && (
-        <ResizablePanel
-          ref={planPanelRef}
-          id='plan-panel'
-          defaultSize={40}
-          minSize={0}
-          maxSize={50}
-          collapsible={true}
-          collapsedSize={0}
-        >
-          <WorkoutPlanPanel
-            onRequestPlan={handlePlanRequest}
-            phases={trainingPhases}
-            onPlanUpdate={handlePlanUpdate}
-            onSelectionChange={handleSelectionChange}
-            selectedItems={selectedItems}
-            selectionDetails={selectionDetails}
-          />
-          </ResizablePanel>
-          )}
-        
-        {isAnalysisPanelOpen ? <ResizableHandle withHandle /> : null}
-        <ResizablePanel
-          ref={analysisPanelRef}
-          id='analysis-panel'
-          defaultSize={0}
-          minSize={0}
-          maxSize={70}
-          collapsible={true}
-          collapsedSize={0}
-        >
-          {isAnalysisPanelOpen && (
-            <AIDisplayPanel
-              workouts={comparisonWorkouts}
-              analysisType={analysisType}
-              onSelectionChange={handleSelectionChange}
-              selectedItems={selectedItems}
-              selectionDetails={selectionDetails}
-            />
-          )}
-        </ResizablePanel>
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel
+              id='plan-panel'
+              defaultSize={40}
+              minSize={20}
+              maxSize={70}
+            >
+              <WorkoutPlanPanel
+                onRequestPlan={handlePlanRequest}
+                phases={trainingPhases}
+                onPlanUpdate={handlePlanUpdate}
+                onSelectionChange={handleSelectionChange}
+                selectedItems={selectedItems}
+                selectionDetails={selectionDetails}
+              />
+            </ResizablePanel>
+          </>
+        )}
+
+        {/* Analysis Panel - conditionally rendered */}
+        {isAnalysisPanelOpen && (
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel
+              id='analysis-panel'
+              defaultSize={40}
+              minSize={20}
+              maxSize={70}
+            >
+              <AIDisplayPanel
+                workouts={comparisonWorkouts}
+                analysisType={analysisType}
+                onSelectionChange={handleSelectionChange}
+                selectedItems={selectedItems}
+                selectionDetails={selectionDetails}
+              />
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
     </div>
   )

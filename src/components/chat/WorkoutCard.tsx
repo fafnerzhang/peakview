@@ -108,9 +108,12 @@ export function WorkoutCard({ workout, isAdded, onSelect, isSelected }: WorkoutC
   const formatIntensityValue = (value: number, metric: string) => {
     switch (metric) {
       case "pace":
-        const minutes = Math.floor(value / 60)
-        const seconds = value % 60
-        return `${minutes}:${seconds.toString().padStart(2, '0')}/km`
+        // Value is in min/km (decimal), not seconds
+        const minutes = Math.floor(value)
+        const seconds = Math.round((value - minutes) * 60)
+        const finalMinutes = seconds >= 60 ? minutes + 1 : minutes
+        const finalSeconds = seconds >= 60 ? 0 : seconds
+        return `${finalMinutes}:${finalSeconds.toString().padStart(2, '0')}/km`
       case "power":
         return `${value}W`
       case "heart_rate":
@@ -163,7 +166,7 @@ export function WorkoutCard({ workout, isAdded, onSelect, isSelected }: WorkoutC
                           <span className="text-xs">
                             {item.distance_range.min === item.distance_range.max
                               ? `${item.distance_range.min} km`
-                              : `${item.distance_range.min}-${item.distance_range.max} km`
+                              : `~${((item.distance_range.min + item.distance_range.max) / 2).toFixed(1)} km`
                             }
                           </span>
                         </div>
@@ -313,10 +316,11 @@ export function WorkoutCard({ workout, isAdded, onSelect, isSelected }: WorkoutC
                 </Badge>
               </div>
               <p className="text-xs text-gray-600">
-                {new Date(workout.date).toLocaleDateString('en-US', {
+                {new Date(workout.date).toLocaleDateString('zh-TW', {
                   weekday: 'long',
                   month: 'short',
-                  day: 'numeric'
+                  day: 'numeric',
+                  timeZone: 'Asia/Taipei'
                 })}
               </p>
             </div>

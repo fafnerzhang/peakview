@@ -108,7 +108,7 @@ export function WorkoutPlanResult({ toolName, input, output, state, onAggregateW
             <div className="flex items-center space-x-4 text-xs text-gray-600">
               <div className="flex items-center space-x-1">
                 <Calendar className="h-3 w-3" />
-                <span>{new Date(workout.date).toLocaleDateString()}</span>
+                <span>{new Date(workout.date).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
               </div>
               {workout.total_time && (
                 <div className="flex items-center space-x-1">

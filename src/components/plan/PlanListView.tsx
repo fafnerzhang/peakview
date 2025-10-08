@@ -68,7 +68,7 @@ export function PlanListView({
   })
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="flex-1 overflow-auto p-4 relative"
       onMouseDown={handleMouseDown}
@@ -77,20 +77,29 @@ export function PlanListView({
     >
       <SelectionOverlay selectionRect={selectionRect} />
       <div className="space-y-4">
-        {phases.map((phase) => (
-          <PhaseCard
-            key={phase.id}
-            phase={phase}
-            isSelected={selectedItems.has(phase.id)}
-            selectionMode={selectionMode}
-            onItemClick={onItemClick}
-            isExpanded={expandedPhases.has(phase.id)}
-            onToggleExpansion={togglePhaseExpansion}
-            expandedWeeks={expandedWeeks}
-            onToggleWeekExpansion={toggleWeekExpansion}
-            selectedItems={selectedItems}
-          />
-        ))}
+        {phases.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-sm">No training phases yet</p>
+            <p className="text-gray-400 text-xs mt-2">
+              Ask your coach to generate a training plan
+            </p>
+          </div>
+        ) : (
+          phases.map((phase) => (
+            <PhaseCard
+              key={phase.id}
+              phase={phase}
+              isSelected={selectedItems.has(phase.id)}
+              selectionMode={selectionMode}
+              onItemClick={onItemClick}
+              isExpanded={expandedPhases.has(phase.id)}
+              onToggleExpansion={togglePhaseExpansion}
+              expandedWeeks={expandedWeeks}
+              onToggleWeekExpansion={toggleWeekExpansion}
+              selectedItems={selectedItems}
+            />
+          ))
+        )}
       </div>
     </div>
   )

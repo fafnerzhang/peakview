@@ -125,10 +125,11 @@ export function PhaseChunkCard({ toolName, input, output, result, payload, onAdd
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('zh-TW', {
       month: 'short',
       day: 'numeric',
-      weekday: 'short'
+      weekday: 'short',
+      timeZone: 'Asia/Taipei'
     })
   }
 

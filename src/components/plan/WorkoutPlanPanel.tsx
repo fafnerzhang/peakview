@@ -206,6 +206,17 @@ export function WorkoutPlanPanel({
       <div className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="p-4">
+            {/* Debug info */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+              <p className="font-mono">
+                📊 Phases loaded: {phases.length}
+              </p>
+              {phases.length > 0 && (
+                <p className="font-mono mt-1">
+                  Phase IDs: {phases.map(p => p.id).join(', ')}
+                </p>
+              )}
+            </div>
             {renderContent()}
           </div>
         </ScrollArea>

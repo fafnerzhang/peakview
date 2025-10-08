@@ -2,6 +2,29 @@
  * User Indicators utility for fetching athlete fitness data
  */
 
+export interface ZoneInfo {
+  zone_number: number;
+  zone_name: string;
+  range_min: number;
+  range_max: number;
+  range_unit: string;
+  description: string;
+  purpose: string;
+}
+
+export interface ZoneRanges {
+  zone_type: string;
+  threshold_value?: number;
+  method: string;
+  zones: ZoneInfo[];
+}
+
+export interface UserZones {
+  power_zones?: ZoneRanges;
+  pace_zones?: ZoneRanges;
+  heart_rate_zones?: ZoneRanges;
+}
+
 export interface UserIndicators {
   user_id: string;
   updated_at: string;
@@ -67,6 +90,38 @@ export async function fetchUserIndicators(accessToken: string, apiBaseUrl: strin
     return data as UserIndicators;
   } catch (error) {
     console.error('Error fetching user indicators:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch user training zones from API service
+ */
+export async function fetchUserZones(
+  accessToken: string,
+  apiBaseUrl: string
+): Promise<UserZones | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/analytics/user-zones`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn('User zones not found - user may not have set up thresholds yet');
+        return null;
+      }
+      throw new Error(`Failed to fetch user zones: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data as UserZones;
+  } catch (error) {
+    console.error('Error fetching user zones:', error);
     return null;
   }
 }
